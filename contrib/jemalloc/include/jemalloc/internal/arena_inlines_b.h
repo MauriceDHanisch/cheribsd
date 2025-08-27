@@ -206,6 +206,11 @@ arena_vsalloc(tsdn_t *tsdn, const void *ptr) {
 	 *   failure.
 	 */
 
+	if (unlikely(cheri_getlen(ptr) == 0)) {
+		malloc_write("<jemalloc>: can't vsalloc zero-length cap\n");
+		abort();
+	}
+
 	rtree_ctx_t rtree_ctx_fallback;
 	rtree_ctx_t *rtree_ctx = tsdn_rtree_ctx(tsdn, &rtree_ctx_fallback);
 
@@ -225,7 +230,15 @@ arena_vsalloc(tsdn_t *tsdn, const void *ptr) {
 
 	assert(szind != SC_NSIZES);
 
-	return sz_index2size(szind);
+	size_t size = sz_index2size(szind);
+	size_t offset = (uintptr_t)ptr - extent_addr_get(extent);
+
+	if (unlikely(offset % size != 0)) {
+		malloc_write("<jemalloc>: cap does not point to the start of an allocation\n");
+		abort();
+	}
+
+	return size;
 }
 
 static inline void
