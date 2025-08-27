@@ -1,0 +1,96 @@
+commit 98ccde572d768970e4d96d38d6654a176baa5fb3
+Author: MauriceDHanisch <maurhanisch@gmail.com>
+Date:   Tue Aug 26 18:04:17 2025 -0400
+
+    Fix je_malloc_underlying_allocation
+
+diff --git a/contrib/jemalloc/include/jemalloc/internal/jemalloc_internal_inlines_c.h b/contrib/jemalloc/include/jemalloc/internal/jemalloc_internal_inlines_c.h
+index b3c9a3cc64b2..f882f0f083b4 100644
+--- a/contrib/jemalloc/include/jemalloc/internal/jemalloc_internal_inlines_c.h
++++ b/contrib/jemalloc/include/jemalloc/internal/jemalloc_internal_inlines_c.h
+@@ -21,6 +21,60 @@
+ #include "jemalloc/internal/sz.h"
+ #include "jemalloc/internal/witness.h"
+ 
++JEMALLOC_ALWAYS_INLINE void *
++get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
++    void *ubptr;
++
++#ifndef __CHERI_PURE_CAPABILITY__
++    ubptr = ptr;
++#else
++    if (unlikely(!cheri_gettag(ptr))) {
++        malloc_write("<jemalloc>: can't unbound invalid cap\n");
++        abort();
++    }
++    if (unlikely(cheri_getoffset(ptr) > cheri_getlen(ptr))) {
++        malloc_write("<jemalloc>: refusing to unbound cap with address "
++            "not within bounds\n");
++        abort();
++    }
++    if (unlikely(cheri_getlen(ptr) == 0)) {
++        malloc_write("<jemalloc>: refusing to unbound cap with 0 length\n");
++        abort();
++    } // Needed for one off error when calculating underlying allocation starting address
++    if (unlikely(cheri_getsealed(ptr))) {
++        malloc_write("<jemalloc>: refusing to unbound sealed cap\n");
++        abort();
++    }
++
++    rtree_ctx_t *rtree_ctx;
++    rtree_ctx_t rtree_ctx_fallback;
++    extent_t *extent;
++    szind_t szind;
++    rtree_ctx = tsdn_rtree_ctx(tsdn, &rtree_ctx_fallback);
++
++    if (rtree_extent_szind_read(tsdn, &extents_rtree, rtree_ctx,
++        (uintptr_t)ptr, false, &extent, &szind)) {
++        abort();
++    }
++
++    assert(extent_state_get(extent) == extent_state_active);
++    /* Only slab members should be looked up via interior pointers. */
++    assert(extent_addr_get(extent) == ptr || extent_slab_get(extent));
++    assert(extent != NULL);
++    assert(szind != SC_NSIZES);
++
++    size_t underlying_size = sz_index2size(szind);
++    void *extent_base = extent->e_addr;
++
++    size_t offset = (uintptr_t)ptr - (uintptr_t)extent_base;
++    size_t region_index = offset / underlying_size;
++    void *region_base = (void *)((uintptr_t)extent_base + region_index * underlying_size);
++
++    ubptr = cheri_setbounds(cheri_setaddress(extent_base, (ptraddr_t)region_base), underlying_size);
++#endif
++    return (ubptr);
++}
++
+ JEMALLOC_ALWAYS_INLINE void *
+ unbound_ptr(tsdn_t *tsdn, void *ptr) {
+ 	void *ubptr;
+diff --git a/contrib/jemalloc/src/jemalloc.c b/contrib/jemalloc/src/jemalloc.c
+index fa056015ee7b..d8a1d93ae08f 100644
+--- a/contrib/jemalloc/src/jemalloc.c
++++ b/contrib/jemalloc/src/jemalloc.c
+@@ -3803,18 +3803,9 @@ je_malloc_underlying_allocation(void *ptr) {
+ 		if (underlying_size == 0) {
+ 			ret = NULL;
+ 		} else {
+-			/*
+-			 * XXX unbound_ptr will actually work if this isn't
+-			 * a pointer to an original allocation but is
+-			 * contained within an extent - we can
+-			 * probably fix this in rtree functions.
+-			 */
+-			ret = unbound_ptr(tsdn, ptr);
+-			/* Bounds as with BOUND_PTR, but preserve SW_VMEM */
++			ret = get_underlying_allocation(tsdn, ptr);
+ 			if (ret != NULL)
+-				ret = cheri_andperm(
+-				    cheri_setbounds(ret, underlying_size),
+-				    CHERI_PERMS_USERSPACE_DATA | CHERI_PERM_SW_VMEM);
++				ret = cheri_andperm(ret, CHERI_PERMS_USERSPACE_DATA | CHERI_PERM_SW_VMEM);
+ 		}
+ 	}
+ 

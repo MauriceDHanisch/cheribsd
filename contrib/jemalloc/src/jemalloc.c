@@ -3799,14 +3799,9 @@ je_malloc_underlying_allocation(void *ptr) {
 	if (unlikely(ptr == NULL)) {
 		ret = NULL;
 	} else {
-		size_t underlying_size = ivsalloc(tsdn, ptr);
-		if (underlying_size == 0) {
-			ret = NULL;
-		} else {
-			ret = get_underlying_allocation(tsdn, ptr);
-			if (ret != NULL)
-				ret = cheri_andperm(ret, CHERI_PERMS_USERSPACE_DATA | CHERI_PERM_SW_VMEM);
-		}
+		ret = get_underlying_allocation(tsdn, ptr);
+		if (ret != NULL)
+			ret = cheri_andperm(ret, CHERI_PERMS_USERSPACE_DATA | CHERI_PERM_SW_VMEM);
 	}
 
 	check_entry_exit_locking(tsdn);
