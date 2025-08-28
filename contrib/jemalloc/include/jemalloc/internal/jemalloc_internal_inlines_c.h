@@ -40,7 +40,7 @@ get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
     if (unlikely(cheri_getlen(ptr) == 0)) {
         malloc_write("<jemalloc>: refusing to unbound cap with 0 length\n");
         abort();
-    } // Needed for one off error when calculating underlying allocation starting address
+    } // Needed for off-by-one error when calculating underlying allocation starting address
     if (unlikely(cheri_getsealed(ptr))) {
         malloc_write("<jemalloc>: refusing to unbound sealed cap\n");
         abort();
