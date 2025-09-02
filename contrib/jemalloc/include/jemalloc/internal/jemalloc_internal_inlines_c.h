@@ -66,7 +66,6 @@ get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
 	assert(extent_state_get(extent) == extent_state_active);
 	/* Only slab members should be looked up via interior pointers. */
 	assert(extent_addr_get(extent) == ptr || extent_slab_get(extent));
-	assert(extent != NULL);
 	assert(szind != SC_NSIZES);
 
 	size_t underlying_size = sz_index2size(szind);
