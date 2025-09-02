@@ -28,6 +28,11 @@ get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
 #ifndef __CHERI_PURE_CAPABILITY__
 	ubptr = ptr;
 #else
+	rtree_ctx_t *rtree_ctx;
+	rtree_ctx_t rtree_ctx_fallback;
+	extent_t *extent;
+	szind_t szind;
+
 	if (unlikely(!cheri_gettag(ptr))) {
 		malloc_printf("<jemalloc>: %s: Can't unbound invalid cap\n", __func__);
 		abort();
@@ -47,12 +52,7 @@ get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
 		abort();
 	}
 
-	rtree_ctx_t *rtree_ctx;
-	rtree_ctx_t rtree_ctx_fallback;
-	extent_t *extent;
-	szind_t szind;
 	rtree_ctx = tsdn_rtree_ctx(tsdn, &rtree_ctx_fallback);
-
 	if (rtree_extent_szind_read(tsdn, &extents_rtree, rtree_ctx,
 	    (uintptr_t)ptr, false, &extent, &szind)) {
 		abort();
