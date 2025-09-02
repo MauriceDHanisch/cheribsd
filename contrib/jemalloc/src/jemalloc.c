@@ -3816,7 +3816,7 @@ je_malloc_underlying_allocation(void *ptr) {
 	    cheri_setbounds(ret, cheri_getlen(ptr)),
 	    ~CHERI_PERM_SW_VMEM);
 	if (unlikely(!cheri_equal_exact(ptr, ret_check))) {
-		malloc_write("<jemalloc>: capability doesn't correspond to an "
+		malloc_write("<jemalloc>: Capability doesn't correspond to an "
 		    "allocation\n");
 		abort();
 	}
