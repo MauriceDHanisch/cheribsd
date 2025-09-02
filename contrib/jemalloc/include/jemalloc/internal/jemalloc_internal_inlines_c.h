@@ -33,6 +33,12 @@ get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
 	extent_t *extent;
 	szind_t szind;
 
+	/*
+	 * These checks catch attacks from an adversary that can manipulate the 
+	 * offset and the bounds of a ptr passed to free() or realloc().
+	 * Reject zero-length capabilities: region arithmetic can misclassify an
+	 * end-of-region pointer as the start of the next region.
+	 */
 	if (unlikely(!cheri_gettag(ptr))) {
 		malloc_printf("<jemalloc>: %s: Can't unbound invalid cap\n", __func__);
 		abort();
@@ -45,8 +51,7 @@ get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
 	if (unlikely(cheri_getlen(ptr) == 0)) {
 		malloc_printf("<jemalloc>: %s: Refusing to unbound cap with 0 length\n", __func__);
 		abort();
-	} /* Needed for off-by-one error when calculating underlying
-	   * allocation starting address */
+	}
 	if (unlikely(cheri_getsealed(ptr))) {
 		malloc_printf("<jemalloc>: %s: Refusing to unbound sealed cap\n", __func__);
 		abort();
