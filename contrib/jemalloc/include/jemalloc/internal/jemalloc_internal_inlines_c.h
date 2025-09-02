@@ -29,21 +29,21 @@ get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
 	ubptr = ptr;
 #else
 	if (unlikely(!cheri_gettag(ptr))) {
-		malloc_write("<jemalloc>: Can't unbound invalid cap\n");
+		malloc_printf("<jemalloc>: %s: Can't unbound invalid cap\n", __func__);
 		abort();
 	}
 	if (unlikely(cheri_getoffset(ptr) > cheri_getlen(ptr))) {
-		malloc_write("<jemalloc>: Refusing to unbound cap with address "
-		    "not within bounds\n");
+		malloc_printf("<jemalloc>: %s: Refusing to unbound cap with address "
+		    "not within bounds\n", __func__);
 		abort();
 	}
 	if (unlikely(cheri_getlen(ptr) == 0)) {
-		malloc_write("<jemalloc>: Refusing to unbound cap with 0 length\n");
+		malloc_printf("<jemalloc>: %s: Refusing to unbound cap with 0 length\n", __func__);
 		abort();
 	} /* Needed for off-by-one error when calculating underlying
 	   * allocation starting address */
 	if (unlikely(cheri_getsealed(ptr))) {
-		malloc_write("<jemalloc>: Refusing to unbound sealed cap\n");
+		malloc_printf("<jemalloc>: %s: Refusing to unbound sealed cap\n", __func__);
 		abort();
 	}
 
@@ -100,16 +100,16 @@ unbound_ptr(tsdn_t *tsdn, void *ptr) {
 	 * manipulated.
 	 */
 	if (unlikely(!cheri_gettag(ptr))) {
-		malloc_write("<jemalloc>: Can't unbound invalid cap\n");
+		malloc_printf("<jemalloc>: %s: Can't unbound invalid cap\n", __func__);
 		abort();
 	}
 	if (unlikely(cheri_getoffset(ptr) != 0)) {
-		malloc_write("<jemalloc>: Refusing to unbound cap at "
-		    "non-zero offset\n");
+		malloc_printf("<jemalloc>: %s: Refusing to unbound cap at "
+		    "non-zero offset\n", __func__);
 		abort();
 	}
 	if (unlikely(cheri_getsealed(ptr))) {
-		malloc_write("<jemalloc>: Refusing to unbound sealed cap\n");
+		malloc_printf("<jemalloc>: %s: Refusing to unbound sealed cap\n", __func__);
 		abort();
 	}
 
