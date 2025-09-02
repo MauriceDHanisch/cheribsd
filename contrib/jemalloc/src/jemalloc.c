@@ -3801,20 +3801,24 @@ je_malloc_underlying_allocation(void *ptr) {
 	} else {
 		ret = get_underlying_allocation(tsdn, ptr);
 		if (ret != NULL) {
-			ret = cheri_andperm(ret, CHERI_PERMS_USERSPACE_DATA | CHERI_PERM_SW_VMEM);
+			ret = cheri_andperm(ret,
+			    CHERI_PERMS_USERSPACE_DATA | CHERI_PERM_SW_VMEM);
 		}
 	}
 
-	/* 
+	/*
 	 * Check that ptr corresponds to a ptr returned by malloc.
-	 * This effectively only checks the address and permissions 
-	 * without CHERI_PERM_SW_VMEM. 
+	 * This effectively only checks the address and permissions
+	 * without CHERI_PERM_SW_VMEM.
 	 * https://github.com/CTSRD-CHERI/cheribsd/issues/2446
-	 */ 	
-	void *ret_check = cheri_andperm(cheri_setbounds(ret, cheri_getlen(ptr)), ~CHERI_PERM_SW_VMEM);
+	 */
+	void *ret_check = cheri_andperm(
+	    cheri_setbounds(ret, cheri_getlen(ptr)),
+	    ~CHERI_PERM_SW_VMEM);
 	if (unlikely(!cheri_equal_exact(ptr, ret_check))) {
-		malloc_write("<jemalloc>: capability doesn't correspond to an allocation\n");
-        abort();
+		malloc_write("<jemalloc>: capability doesn't correspond to an "
+		    "allocation\n");
+		abort();
 	}
 
 	check_entry_exit_locking(tsdn);

@@ -23,56 +23,60 @@
 
 JEMALLOC_ALWAYS_INLINE void *
 get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
-    void *ubptr;
+	void *ubptr;
 
 #ifndef __CHERI_PURE_CAPABILITY__
-    ubptr = ptr;
+	ubptr = ptr;
 #else
-    if (unlikely(!cheri_gettag(ptr))) {
-        malloc_write("<jemalloc>: can't unbound invalid cap\n");
-        abort();
-    }
-    if (unlikely(cheri_getoffset(ptr) > cheri_getlen(ptr))) {
-        malloc_write("<jemalloc>: refusing to unbound cap with address "
-            "not within bounds\n");
-        abort();
-    }
-    if (unlikely(cheri_getlen(ptr) == 0)) {
-        malloc_write("<jemalloc>: refusing to unbound cap with 0 length\n");
-        abort();
-    } // Needed for off-by-one error when calculating underlying allocation starting address
-    if (unlikely(cheri_getsealed(ptr))) {
-        malloc_write("<jemalloc>: refusing to unbound sealed cap\n");
-        abort();
-    }
+	if (unlikely(!cheri_gettag(ptr))) {
+		malloc_write("<jemalloc>: can't unbound invalid cap\n");
+		abort();
+	}
+	if (unlikely(cheri_getoffset(ptr) > cheri_getlen(ptr))) {
+		malloc_write("<jemalloc>: refusing to unbound cap with address "
+		    "not within bounds\n");
+		abort();
+	}
+	if (unlikely(cheri_getlen(ptr) == 0)) {
+		malloc_write("<jemalloc>: refusing to unbound cap with 0 length\n");
+		abort();
+	} /* Needed for off-by-one error when calculating underlying
+	   * allocation starting address */
+	if (unlikely(cheri_getsealed(ptr))) {
+		malloc_write("<jemalloc>: refusing to unbound sealed cap\n");
+		abort();
+	}
 
-    rtree_ctx_t *rtree_ctx;
-    rtree_ctx_t rtree_ctx_fallback;
-    extent_t *extent;
-    szind_t szind;
-    rtree_ctx = tsdn_rtree_ctx(tsdn, &rtree_ctx_fallback);
+	rtree_ctx_t *rtree_ctx;
+	rtree_ctx_t rtree_ctx_fallback;
+	extent_t *extent;
+	szind_t szind;
+	rtree_ctx = tsdn_rtree_ctx(tsdn, &rtree_ctx_fallback);
 
-    if (rtree_extent_szind_read(tsdn, &extents_rtree, rtree_ctx,
-        (uintptr_t)ptr, false, &extent, &szind)) {
-        abort();
-    }
+	if (rtree_extent_szind_read(tsdn, &extents_rtree, rtree_ctx,
+	    (uintptr_t)ptr, false, &extent, &szind)) {
+		abort();
+	}
 
-    assert(extent_state_get(extent) == extent_state_active);
-    /* Only slab members should be looked up via interior pointers. */
-    assert(extent_addr_get(extent) == ptr || extent_slab_get(extent));
-    assert(extent != NULL);
-    assert(szind != SC_NSIZES);
+	assert(extent_state_get(extent) == extent_state_active);
+	/* Only slab members should be looked up via interior pointers. */
+	assert(extent_addr_get(extent) == ptr || extent_slab_get(extent));
+	assert(extent != NULL);
+	assert(szind != SC_NSIZES);
 
-    size_t underlying_size = sz_index2size(szind);
-    void *extent_base = extent->e_addr;
+	size_t underlying_size = sz_index2size(szind);
+	void *extent_base = extent->e_addr;
 
-    size_t offset = (uintptr_t)ptr - (uintptr_t)extent_base;
-    size_t region_index = offset / underlying_size;
-    void *region_base = (void *)((uintptr_t)extent_base + region_index * underlying_size);
+	size_t offset = (uintptr_t)ptr - (uintptr_t)extent_base;
+	size_t region_index = offset / underlying_size;
+	void *region_base = (void *)((uintptr_t)extent_base +
+	    region_index * underlying_size);
 
-    ubptr = cheri_setbounds(cheri_setaddress(extent_base, (ptraddr_t)region_base), underlying_size);
+	ubptr = cheri_setbounds(
+	    cheri_setaddress(extent_base, (ptraddr_t)region_base),
+	    underlying_size);
 #endif
-    return (ubptr);
+	return (ubptr);
 }
 
 JEMALLOC_ALWAYS_INLINE void *
