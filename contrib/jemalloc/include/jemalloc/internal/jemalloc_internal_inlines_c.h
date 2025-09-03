@@ -40,21 +40,16 @@ get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
 	 * end-of-region pointer as the start of the next region.
 	 */
 	if (unlikely(!cheri_gettag(ptr))) {
-		malloc_printf("<jemalloc>: %s: Can't unbound invalid cap\n", __func__);
-		abort();
+		return NULL;
 	}
 	if (unlikely(cheri_getoffset(ptr) > cheri_getlen(ptr))) {
-		malloc_printf("<jemalloc>: %s: Refusing to unbound cap with address "
-		    "not within bounds\n", __func__);
-		abort();
+		return NULL;
 	}
 	if (unlikely(cheri_getlen(ptr) == 0)) {
-		malloc_printf("<jemalloc>: %s: Refusing to unbound cap with 0 length\n", __func__);
-		abort();
+		return NULL;
 	}
 	if (unlikely(cheri_getsealed(ptr))) {
-		malloc_printf("<jemalloc>: %s: Refusing to unbound sealed cap\n", __func__);
-		abort();
+		return NULL;
 	}
 
 	rtree_ctx = tsdn_rtree_ctx(tsdn, &rtree_ctx_fallback);
