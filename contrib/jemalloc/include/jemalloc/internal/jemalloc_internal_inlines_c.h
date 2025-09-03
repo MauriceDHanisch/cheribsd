@@ -99,17 +99,13 @@ unbound_ptr(tsdn_t *tsdn, void *ptr) {
 	 * manipulated.
 	 */
 	if (unlikely(!cheri_gettag(ptr))) {
-		malloc_printf("<jemalloc>: %s: Can't unbound invalid cap\n", __func__);
-		abort();
+		return NULL;
 	}
 	if (unlikely(cheri_getoffset(ptr) != 0)) {
-		malloc_printf("<jemalloc>: %s: Refusing to unbound cap at "
-		    "non-zero offset\n", __func__);
-		abort();
+		return NULL;
 	}
 	if (unlikely(cheri_getsealed(ptr))) {
-		malloc_printf("<jemalloc>: %s: Refusing to unbound sealed cap\n", __func__);
-		abort();
+		return NULL;
 	}
 
 	rtree_ctx = tsdn_rtree_ctx(tsdn, &rtree_ctx_fallback);
