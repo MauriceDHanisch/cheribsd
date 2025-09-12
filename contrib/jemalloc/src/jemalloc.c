@@ -3812,11 +3812,13 @@ je_malloc_underlying_allocation(void *ptr) {
 	 * without CHERI_PERM_SW_VMEM.
 	 * https://github.com/CTSRD-CHERI/cheribsd/issues/2446
 	 */
-	void *ret_check = cheri_andperm(
-	    cheri_setbounds(ret, cheri_getlen(ptr)),
-	    ~CHERI_PERM_SW_VMEM);
-	if (unlikely(!cheri_equal_exact(ptr, ret_check))) {
-		return NULL;
+	if (ret != NULL) {
+		void *ret_check = cheri_andperm(
+			cheri_setbounds(ret, cheri_getlen(ptr)),
+			~CHERI_PERM_SW_VMEM);
+		if (unlikely(!cheri_equal_exact(ptr, ret_check))) {
+			ret = NULL;
+		}
 	}
 
 	check_entry_exit_locking(tsdn);

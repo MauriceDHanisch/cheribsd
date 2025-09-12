@@ -55,7 +55,7 @@ get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
 	rtree_ctx = tsdn_rtree_ctx(tsdn, &rtree_ctx_fallback);
 	if (rtree_extent_szind_read(tsdn, &extents_rtree, rtree_ctx,
 	    (uintptr_t)ptr, false, &extent, &szind)) {
-		abort();
+		return NULL;
 	}
 
 	assert(extent_state_get(extent) == extent_state_active);
