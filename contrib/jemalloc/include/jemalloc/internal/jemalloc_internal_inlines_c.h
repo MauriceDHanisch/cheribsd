@@ -75,7 +75,7 @@ get_underlying_allocation(tsdn_t *tsdn, void *ptr) {
 	    cheri_setaddress(extent_base, (ptraddr_t)region_base),
 	    underlying_size);
 #endif
-	return (ubptr);
+	return ubptr;
 }
 
 JEMALLOC_ALWAYS_INLINE void *
