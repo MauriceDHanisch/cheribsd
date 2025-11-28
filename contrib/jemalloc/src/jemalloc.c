@@ -3800,10 +3800,8 @@ je_malloc_underlying_allocation(void *ptr) {
 		ret = NULL;
 	} else {
 		ret = get_underlying_allocation(tsdn, ptr);
-		if (ret != NULL) {
-			ret = cheri_andperm(ret,
-			    CHERI_PERMS_USERSPACE_DATA | CHERI_PERM_SW_VMEM);
-		}
+		ret = cheri_andperm(ret,
+		    CHERI_PERMS_USERSPACE_DATA | CHERI_PERM_SW_VMEM);
 	}
 
 	/*
